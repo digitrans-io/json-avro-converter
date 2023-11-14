@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'pl.allegro.tech.build.axion-release' version '1.10.2'
+}
+
+scmVersion {
+    tag {
+        prefix = 'json-avro-converter'
+    }
+    versionCreator 'versionWithBranch'
+
+    hooks {
+        pre 'fileUpdate', [files: ['README.md'], pattern: {v, p -> /'$v'/ }, replacement: {v, p -> "'$v'"}]
+        pre 'commit'
+    }
+}
+
+allprojects {
+    project.group = 'tech.allegro.schema.json2avro'
+    project.version = scmVersion.version
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+subprojects {
+
+    project.ext.versions = [
+        spock: '2.1-groovy-3.0',
+        groovy: '3.0.9'
+    ]
+
+    repositories {
+        mavenCentral()
+    }
+
+    test {
+        testLogging {
+            exceptionFormat 'full'
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+    }
+}
+
+wrapper {
+    gradleVersion = '7.4.2'
+}

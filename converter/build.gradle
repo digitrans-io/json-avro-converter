@@ -1,0 +1,83 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath 'com.commercehub.gradle.plugin:gradle-avro-plugin:0.14.0'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'groovy'
+    // does not work with Java 10
+    // id 'jacoco'
+    // https://github.com/melix/jmh-gradle-plugin#what-plugin-version-to-use
+    id 'me.champeau.gradle.jmh' version '0.5.3'
+    id 'pmd'
+}
+
+apply plugin: 'com.commercehub.gradle.plugin.avro'
+apply plugin: 'idea'
+
+configurations {
+    jmh
+}
+
+jmh {
+    include = 'tech\\.allegro\\.schema\\.json2avro\\.converter\\..*'
+    humanOutputFile = null
+    jmhVersion = '1.20'
+    iterations = 2
+    timeOnIteration = '10s'
+    fork = 1
+    warmupIterations = 1
+    warmup = '10s'
+    failOnError = true
+    threads = 1
+    duplicateClassesStrategy = 'warn'
+}
+
+dependencies {
+    implementation group: 'org.apache.avro', name: 'avro', version: '1.9.0'
+
+    testImplementation group: 'org.spockframework', name: 'spock-core', version: versions.spock
+    testImplementation group: 'org.codehaus.groovy', name: 'groovy-all', version: versions.groovy
+
+    jmh 'org.openjdk.jmh:jmh-core:1.20'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.20'
+
+    implementation 'com.google.guava:guava:30.1.1-jre'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.7.1'
+}
+
+idea {
+    module {
+        scopes.PROVIDED.plus += [ configurations.jmh ]
+    }
+}
+
+// Workaround for duplicated `BenchmarkList` and `CompilerHints` files from META-INF directory in jmh jar.
+// Those duplications can prevent from running benchmark tests.
+// More info https://github.com/melix/jmh-gradle-plugin/issues/6
+tasks.getByName('jmhJar').doFirst() {duplicatesStrategy(DuplicatesStrategy.EXCLUDE)}
+
+test {
+    useJUnitPlatform()
+    testLogging() {
+        events "passed", "skipped", "failed"
+        exceptionFormat 'full'
+    }
+}
+
+pmd {
+    toolVersion = "6.41.0"
+    ruleSetFiles = files("config/pmd.xml")
+    ruleSets = []
+}
